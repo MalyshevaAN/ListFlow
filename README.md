@@ -1,1 +1,1 @@
-# se_xp_2025
+# Extremal programming 2025
