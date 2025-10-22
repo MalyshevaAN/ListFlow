@@ -48,10 +48,11 @@ public class UserController {
     }
 
     @PostMapping("/login")
-    public String processLogin(@ModelAttribute User user, Model model) {
+    public String processLogin(@ModelAttribute User user, Model model, HttpSession session) {
         Optional<User> existing = userRepository.findByEmail(user.getEmail());
 
         if (existing.isPresent() && passwordEncoder.matches(user.getPassword(), existing.get().getPassword())) {
+            session.setAttribute("userId", existing.get().getId());
             return "redirect:/";
         } else {
             model.addAttribute("error", "Неверный email или пароль!");
