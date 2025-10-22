@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.servlet.http.HttpSession;
 import java.util.Optional;
 
 @Controller
@@ -16,8 +17,6 @@ public class UserController {
 
     @Autowired
     private UserRepository userRepository;
-
-
 
     @GetMapping("/register")
     public String showRegistrationForm(Model model) {
@@ -38,16 +37,18 @@ public class UserController {
     }
 
     @GetMapping("/login")
-    public String showLoginForm(Model model) {
+    public String showLoginForm(Model model, HttpSession session) {
+        session.invalidate();
         model.addAttribute("user", new User());
         return "login";
     }
 
     @PostMapping("/login")
-    public String processLogin(@ModelAttribute User user, Model model) {
+    public String processLogin(@ModelAttribute User user, Model model, HttpSession session) {
         Optional<User> existing = userRepository.findByEmailAndPassword(user.getEmail(), user.getPassword());
 
         if (existing.isPresent()) {
+            session.setAttribute("userId", existing.get().getId());
             return "redirect:/";
         } else {
             model.addAttribute("error", "Неверный email или пароль!");
@@ -55,8 +56,9 @@ public class UserController {
         }
     }
 
-    @GetMapping("/")
-    public String showHomePage() {
-        return "index";
+    @GetMapping("/logout")
+    public String logout(HttpSession session) {
+        session.invalidate();
+        return "redirect:/login";
     }
 }
