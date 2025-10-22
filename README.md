@@ -13,6 +13,26 @@
 - Удаление задач
 - Добавление задач в отдельные папки
 
+## Демо (GIF)
+<p align="center">
+  <img src="assets/listflow.gif" alt="ListFlow demo" width="720"/>
+</p>
+<p align="center"><em>Демо: регистрация, создание, редактирование и установка дедлайна для задачи, создание папок</em></p>
+
+## Скриншоты
+
+<p align="center">
+  <img src="assets/login.png" alt="Авторизация" width="640" style="margin:8px"/>
+  <br>
+  <em>Авторизация</em>
+</p>
+
+<p align="center">
+  <img src="assets/listflow_folders.png" alt="Структура списков задач" width="640" style="margin:8px"/>
+  <br>
+  <em>Структура списков задач</em>
+</p>
+
 ---
 
 ## Технологии
