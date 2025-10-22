@@ -18,6 +18,10 @@ public class UserController {
     @Autowired
     private UserRepository userRepository;
 
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
     @GetMapping("/register")
     public String showRegistrationForm(Model model) {
         model.addAttribute("user", new User());
@@ -31,7 +35,7 @@ public class UserController {
             return "register";
         }
 
-        user.setPassword(user.getPassword());
+        user.setPassword(passwordEncoder.encode(user.getPassword()));
         userRepository.save(user);
         return "redirect:/login";
     }
@@ -44,11 +48,10 @@ public class UserController {
     }
 
     @PostMapping("/login")
-    public String processLogin(@ModelAttribute User user, Model model, HttpSession session) {
-        Optional<User> existing = userRepository.findByEmailAndPassword(user.getEmail(), user.getPassword());
+    public String processLogin(@ModelAttribute User user, Model model) {
+        Optional<User> existing = userRepository.findByEmail(user.getEmail());
 
-        if (existing.isPresent()) {
-            session.setAttribute("userId", existing.get().getId());
+        if (existing.isPresent() && passwordEncoder.matches(user.getPassword(), existing.get().getPassword())) {
             return "redirect:/";
         } else {
             model.addAttribute("error", "Неверный email или пароль!");
