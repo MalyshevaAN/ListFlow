@@ -2,8 +2,10 @@ package com.example.xp;
 
 import com.example.xp.entity.Task;
 import com.example.xp.entity.User;
+import com.example.xp.entity.Folder;
 import com.example.xp.repository.TaskRepository;
 import com.example.xp.repository.UserRepository;
+import com.example.xp.repository.FolderRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,13 +35,18 @@ public class TaskControllerTest {
 
     @Autowired
     private UserRepository userRepository;
+    
+    @Autowired
+    private FolderRepository folderRepository;
 
     private User testUser;
+    private Folder testFolder;
     private MockHttpSession session;
 
     @BeforeEach
     public void setup() {
         taskRepository.deleteAll();
+        folderRepository.deleteAll();
         userRepository.deleteAll();
 
         testUser = new User();
@@ -47,6 +54,12 @@ public class TaskControllerTest {
         testUser.setEmail("test@example.com");
         testUser.setPassword("password123");
         testUser = userRepository.save(testUser);
+        
+        testFolder = new Folder();
+        testFolder.setName("Главное");
+        testFolder.setUser(testUser);
+        testFolder.setDefault(true);
+        testFolder = folderRepository.save(testFolder);
 
         session = new MockHttpSession();
         session.setAttribute("userId", testUser.getId());
@@ -57,11 +70,11 @@ public class TaskControllerTest {
         mockMvc.perform(post("/tasks/add")
                         .session(session)
                         .param("title", "Новая задача")
-                        .param("deadline", "2024-12-31"))
-                .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/"));
+                        .param("deadline", "2024-12-31")
+                        .param("folderId", testFolder.getId().toString()))
+                .andExpect(status().is3xxRedirection());
 
-        List<Task> tasks = taskRepository.findByUserOrderByIdDesc(testUser);
+        List<Task> tasks = taskRepository.findByFolderOrderByIdDesc(testFolder);
         assertEquals(1, tasks.size());
         assertEquals("Новая задача", tasks.get(0).getTitle());
         assertEquals(LocalDate.parse("2024-12-31"), tasks.get(0).getDeadline());
@@ -71,10 +84,11 @@ public class TaskControllerTest {
     public void testAddTaskWithoutDeadline() throws Exception {
         mockMvc.perform(post("/tasks/add")
                         .session(session)
-                        .param("title", "Задача без дедлайна"))
+                        .param("title", "Задача без дедлайна")
+                        .param("folderId", testFolder.getId().toString()))
                 .andExpect(status().is3xxRedirection());
 
-        List<Task> tasks = taskRepository.findByUserOrderByIdDesc(testUser);
+        List<Task> tasks = taskRepository.findByFolderOrderByIdDesc(testFolder);
         assertEquals(1, tasks.size());
         assertNull(tasks.get(0).getDeadline());
     }
@@ -84,12 +98,14 @@ public class TaskControllerTest {
         Task task = new Task();
         task.setTitle("Тестовая задача");
         task.setUser(testUser);
+        task.setFolder(testFolder);
         task.setStatus(Task.TaskStatus.NOT_STARTED);
         task = taskRepository.save(task);
 
         mockMvc.perform(post("/tasks/" + task.getId() + "/status")
                         .session(session)
-                        .param("status", "IN_PROGRESS"))
+                        .param("status", "IN_PROGRESS")
+                        .param("folderId", testFolder.getId().toString()))
                 .andExpect(status().is3xxRedirection());
 
         Task updatedTask = taskRepository.findById(task.getId()).orElse(null);
@@ -102,22 +118,25 @@ public class TaskControllerTest {
         Task task1 = new Task();
         task1.setTitle("Задача 1");
         task1.setUser(testUser);
+        task1.setFolder(testFolder);
         task1.setStatus(Task.TaskStatus.NOT_STARTED);
         taskRepository.save(task1);
 
         Task task2 = new Task();
         task2.setTitle("Задача 2");
         task2.setUser(testUser);
+        task2.setFolder(testFolder);
         task2.setStatus(Task.TaskStatus.COMPLETED);
         taskRepository.save(task2);
 
         Task task3 = new Task();
         task3.setTitle("Задача 3");
         task3.setUser(testUser);
+        task3.setFolder(testFolder);
         task3.setStatus(Task.TaskStatus.IN_PROGRESS);
         taskRepository.save(task3);
 
-        List<Task> tasks = taskRepository.findByUserOrderByIdDesc(testUser);
+        List<Task> tasks = taskRepository.findByFolderOrderByIdDesc(testFolder);
         tasks.sort((t1, t2) -> {
             boolean isDone1 = t1.getStatus() == Task.TaskStatus.COMPLETED;
             boolean isDone2 = t2.getStatus() == Task.TaskStatus.COMPLETED;
@@ -137,13 +156,15 @@ public class TaskControllerTest {
         Task task = new Task();
         task.setTitle("Задача для удаления");
         task.setUser(testUser);
+        task.setFolder(testFolder);
         task.setStatus(Task.TaskStatus.NOT_STARTED);
         task = taskRepository.save(task);
 
         Long taskId = task.getId();
 
         mockMvc.perform(post("/tasks/" + taskId + "/delete")
-                        .session(session))
+                        .session(session)
+                        .param("folderId", testFolder.getId().toString()))
                 .andExpect(status().is3xxRedirection());
 
         assertFalse(taskRepository.findById(taskId).isPresent());
@@ -154,6 +175,7 @@ public class TaskControllerTest {
         Task task = new Task();
         task.setTitle("Старое название");
         task.setUser(testUser);
+        task.setFolder(testFolder);
         task.setDeadline(LocalDate.parse("2024-12-31"));
         task = taskRepository.save(task);
 
@@ -176,10 +198,17 @@ public class TaskControllerTest {
         anotherUser.setEmail("another@example.com");
         anotherUser.setPassword("password456");
         anotherUser = userRepository.save(anotherUser);
+        
+        Folder anotherFolder = new Folder();
+        anotherFolder.setName("Главное");
+        anotherFolder.setUser(anotherUser);
+        anotherFolder.setDefault(true);
+        anotherFolder = folderRepository.save(anotherFolder);
 
         Task task = new Task();
         task.setTitle("Чужая задача");
         task.setUser(anotherUser);
+        task.setFolder(anotherFolder);
         task.setStatus(Task.TaskStatus.NOT_STARTED);
         task = taskRepository.save(task);
 
